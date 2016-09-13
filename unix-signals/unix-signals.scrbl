@@ -26,19 +26,8 @@ All the functionality below can be accessed with a single
 
 @(defmodule unix-signals)
 
-@subsection{Mapping between signal names and signal numbers}
-
 This library represents signal names as symbols all in upper-case;
 for example, @racket['SIGUSR1] and @racket['SIGKILL].
-
-@defproc[(lookup-signal-number [sym symbol?]) (opt/c fixnum?)]{
-Returns a fixnum if the symbol name is defined, or @racket[#f] if not. }
-
-@defproc[(lookup-signal-name [num fixnum?]) (opt/c symbol?)]{ Returns
-a symbol naming the given signal number, if one is defined, or
-@racket[#f] if not. Note that in cases where multiple C identifiers
-map to a given signal number, an arbitrary choice among the
-possibilities is returned. }
 
 @subsection{Waiting for a signal}
 
@@ -97,3 +86,14 @@ for convenience.
 boolean?]{ Calls @tt{kill(2)} to deliver the given signal to the
 given process ID. All special cases for @racket[pid] from the
 @tt{kill(2)} manpage apply. }
+
+@subsection{Mapping between signal names and signal numbers}
+
+@defproc[(lookup-signal-number [sym symbol?]) (opt/c fixnum?)]{
+Returns a fixnum if the symbol name is defined, or @racket[#f] if not. }
+
+@defproc[(lookup-signal-name [num fixnum?]) (opt/c symbol?)]{ Returns
+a symbol naming the given signal number, if one is defined, or
+@racket[#f] if not. Note that in cases where multiple C identifiers
+map to a given signal number, an arbitrary choice among the
+possibilities is returned. }
