@@ -109,7 +109,9 @@ Scheme_Object *prim_get_signal_names(int argc, Scheme_Object **argv) {
 
   /* Not POSIX.1-1990, but SUSv2 and POSIX.1-2001 */
   ADD_SIGNAL_NAME(SIGBUS);
+#if !defined(__APPLE__)
   ADD_SIGNAL_NAME(SIGPOLL);
+#endif
   ADD_SIGNAL_NAME(SIGPROF);
   ADD_SIGNAL_NAME(SIGSYS);
   ADD_SIGNAL_NAME(SIGTRAP);
@@ -133,19 +135,19 @@ Scheme_Object *prim_capture_signal(int argc, Scheme_Object **argv) {
   int code = SCHEME_INT_VAL(argv[1]);
   switch (code) {
     case 0:
-      if (signal(signum, signal_handler_fn) == SIG_ERR) {
+      if (XFORM_HIDE_EXPR(signal(signum, signal_handler_fn) == SIG_ERR)) {
         perror("unix-signals-extension signal(2) install");
         return scheme_false;
       }
       break;
     case 1:
-      if (signal(signum, SIG_IGN) == SIG_ERR) {
+      if (XFORM_HIDE_EXPR(signal(signum, SIG_IGN) == SIG_ERR)) {
         perror("unix-signals-extension signal(2) ignore");
         return scheme_false;
       }
       break;
     case 2:
-      if (signal(signum, SIG_DFL) == SIG_ERR) {
+      if (XFORM_HIDE_EXPR(signal(signum, SIG_DFL) == SIG_ERR)) {
         perror("unix-signals-extension signal(2) default");
         return scheme_false;
       }
