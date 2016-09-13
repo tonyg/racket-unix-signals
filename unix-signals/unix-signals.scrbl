@@ -49,6 +49,16 @@ use @racket[next-signal-evt] or @racket[read-signal]. Use
 signal (@tt{SIG_IGN}) or to install the default
 signal-handler (@tt{SIG_DFL}), respectively.
 
+@racketblock[
+(require unix-signals)
+(capture-signal! 'SIGUSR1)
+(capture-signal! 'SIGUSR2)
+(printf "Try 'kill -USR1 ~a' and 'kill -USR2 ~a'\n" (getpid) (getpid))
+(let loop ()
+  (define signum (read-signal))
+  (printf "Received signal ~v (name ~v)\n" signum (lookup-signal-name signum))
+  (loop))]
+
 Calls to @racket[capture-signal!] and friends have @emph{global} effect
 within the Racket process. Likewise, use of @racket[next-signal-evt]
 and @racket[read-signal] have global side-effects on the state of the
