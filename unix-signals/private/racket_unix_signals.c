@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -9,10 +10,11 @@
 
 #include <sys/types.h>
 
-#include "escheme.h"
-
 /* This implementation uses djb's "self-pipe trick".
  * See http://cr.yp.to/docs/selfpipe.html. */
+
+/* TODO: Communicate errno to Racket rather than using `perror`.
+ * See Racket's `saved-errno` and `lookup-errno`. */
 
 static int self_pipe_initialized = 0;
 static int self_pipe_read_end = -1;
@@ -71,20 +73,13 @@ static void signal_handler_fn(int signum) {
   }
 }
 
-Scheme_Object *prim_get_signal_fd(int argc, Scheme_Object **argv) {
-  if (self_pipe_read_end == -1) {
-    return scheme_false;
-  } else {
-    return scheme_make_fd_input_port(self_pipe_read_end, scheme_intern_symbol("signal-fd"), 0, 0);
-  }
+int prim_get_signal_fd(void) {
+    return self_pipe_read_end;
 }
 
-Scheme_Object *prim_get_signal_names(int argc, Scheme_Object **argv) {
-  Scheme_Hash_Table *ht;
+void prim_signal_names_for_each(void (*callback)(char*, int)) {
 
-  ht = scheme_make_hash_table(SCHEME_hash_ptr);
-
-#define ADD_SIGNAL_NAME(n) scheme_hash_set(ht, scheme_intern_symbol(#n), scheme_make_integer(n))
+#define ADD_SIGNAL_NAME(n) callback(#n, n)
 
   /* POSIX.1-1990 */
   ADD_SIGNAL_NAME(SIGHUP);
@@ -127,80 +122,51 @@ Scheme_Object *prim_get_signal_names(int argc, Scheme_Object **argv) {
 
 #undef ADD_SIGNAL_NAME
 
-  return (Scheme_Object *) ht;
+
 }
 
-Scheme_Object *prim_capture_signal(int argc, Scheme_Object **argv) {
-  int signum = SCHEME_INT_VAL(argv[0]);
-  int code = SCHEME_INT_VAL(argv[1]);
+bool prim_capture_signal(int signum, int code) {
   switch (code) {
     case 0:
-      if (XFORM_HIDE_EXPR(signal(signum, signal_handler_fn) == SIG_ERR)) {
+      if (signal(signum, signal_handler_fn) == SIG_ERR) {
         perror("unix-signals-extension signal(2) install");
-        return scheme_false;
+        return false;
       }
       break;
     case 1:
-      if (XFORM_HIDE_EXPR(signal(signum, SIG_IGN) == SIG_ERR)) {
+      if (signal(signum, SIG_IGN) == SIG_ERR) {
         perror("unix-signals-extension signal(2) ignore");
-        return scheme_false;
+        return false;
       }
       break;
     case 2:
-      if (XFORM_HIDE_EXPR(signal(signum, SIG_DFL) == SIG_ERR)) {
+      if (signal(signum, SIG_DFL) == SIG_ERR) {
         perror("unix-signals-extension signal(2) default");
-        return scheme_false;
+        return false;
       }
       break;
     default:
-      return scheme_false;
+      return false;
   }
-  return scheme_true;
+  return true;
 }
 
-Scheme_Object *prim_send_signal(int argc, Scheme_Object **argv) {
-  pid_t pid = SCHEME_INT_VAL(argv[0]);
-  int sig = SCHEME_INT_VAL(argv[1]);
+bool prim_send_signal(pid_t pid, int sig) {
   if (kill(pid, sig) == -1) {
     perror("unix-signals-extension kill(2)");
-    return scheme_false;
+    return false;
   }
-  return scheme_true;
+  return true;
 }
 
-Scheme_Object *scheme_reload(Scheme_Env *env) {
-  Scheme_Env *module_env;
-  Scheme_Object *proc;
+bool racket_unix_signals_init(void) {
 
   if (!self_pipe_initialized) {
     if (setup_self_pipe() == -1) {
-      return scheme_false;
+      return false;
     }
     self_pipe_initialized = 1;
   }
 
-  module_env = scheme_primitive_module(scheme_intern_symbol("unix-signals-extension"), env);
-
-  proc = scheme_make_prim_w_arity(prim_get_signal_fd, "get-signal-fd", 0, 0);
-  scheme_add_global("get-signal-fd", proc, module_env);
-
-  proc = scheme_make_prim_w_arity(prim_get_signal_names, "get-signal-names", 0, 0);
-  scheme_add_global("get-signal-names", proc, module_env);
-
-  proc = scheme_make_prim_w_arity(prim_capture_signal, "set-signal-handler!", 2, 2);
-  scheme_add_global("set-signal-handler!", proc, module_env);
-
-  proc = scheme_make_prim_w_arity(prim_send_signal, "lowlevel-send-signal!", 2, 2);
-  scheme_add_global("lowlevel-send-signal!", proc, module_env);
-
-  scheme_finish_primitive_module(module_env);
-  return scheme_void;
-}
-
-Scheme_Object *scheme_initialize(Scheme_Env *env) {
-  return scheme_reload(env);
-}
-
-Scheme_Object *scheme_module_name() {
-  return scheme_intern_symbol("unix-signals-extension");
+  return true;
 }

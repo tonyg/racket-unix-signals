@@ -6,30 +6,25 @@
 @title{unix-signals}
 @author[(author+email "Tony Garnock-Jones" "tonyg@leastfixedpoint.com")]
 
-If you find that this library lacks some feature you need, or you have
-a suggestion for improving it, please don't hesitate to
-@link["mailto:tonyg@leastfixedpoint.com"]{get in touch with me}!
+@(defmodule unix-signals)
 
-@section{Introduction}
+@nested[#:style 'inset]{
+ If you find that this library lacks some feature you need, or you have
+ a suggestion for improving it, please don't hesitate to
+ @link["mailto:tonyg@leastfixedpoint.com"]{get in touch with me}!
+}
 
 This library provides a means of sending and receiving Unix signals to
 Racket programs.
 
-Be warned that attempting to receive certain signals used by the
-Racket runtime is dangerous, as the code here will conflict with the
+@(define unsafe
+   @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{unsafe})
+
+@bold{Be warned} that attempting to receive certain signals used by the
+Racket runtime is @|unsafe|, as the code here will conflict with the
 code in Racket itself.
 
-@section{What to require}
-
-All the functionality below can be accessed with a single
-@racket[require]:
-
-@(defmodule unix-signals)
-
-This library represents signal names as symbols all in upper-case;
-for example, @racket['SIGUSR1] and @racket['SIGKILL].
-
-@subsection{Waiting for a signal}
+@section{Waiting for a signal}
 
 To receive Unix signals using this library, call
 @racket[capture-signal!] once for each signal of interest, and then
@@ -56,15 +51,27 @@ Racket process.
 @defproc[(capture-signal! [sig (or/c fixnum? symbol?)]) boolean?]{
 Installs a signal handler for the given signal. When the given signal
 is received by the process, its signal number will be returned by uses
-of @racket[next-signal-evt] and/or @racket[read-signal]. }
+of @racket[next-signal-evt] and/or @racket[read-signal].
+
+ Note that this function is @|unsafe|:
+ it can corrupt or crash the Racket runtime system.
+}
 
 @defproc[(ignore-signal! [sig (or/c fixnum? symbol?)]) boolean?]{
-Causes the given signal to be ignored (@tt{SIG_IGN}) by the process. }
+ Causes the given signal to be ignored (@tt{SIG_IGN}) by the process.
+
+ Note that this function is @|unsafe|:
+ it can corrupt or crash the Racket runtime system.
+}
 
 @defproc[(release-signal! [sig (or/c fixnum? symbol?)]) boolean?]{
-Installs the default handler (@tt{SIG_DFL}) for the given signal. }
+ Installs the default handler (@tt{SIG_DFL}) for the given signal.
 
-@defthing[next-signal-evt evt?]{ @tech[#:doc
+ Note that this function is @|unsafe|:
+ it can corrupt or crash the Racket runtime system.
+}
+
+@defthing[next-signal-evt (evt/c fixnum?)]{ @tech[#:doc
 '(lib "scribblings/reference/reference.scrbl")]{Synchronizable event} which
 becomes ready when a signal previously registered with
 @racket[capture-signal!] is received, at which point it returns the
@@ -77,17 +84,21 @@ number of the received signal. Signals are buffered internally using
 the @link["http://cr.yp.to/docs/selfpipe.html"]{self-pipe trick}, and
 are therefore delivered in order of receipt. }
 
-@subsection{Sending a signal}
-
-This library provides @racket[getpid] from @racketmodname[racket/os]
-for convenience.
+@section{Sending a signal}
 
 @defproc[(send-signal! [pid fixnum?] [sig (or/c fixnum? symbol?)])
 boolean?]{ Calls @tt{kill(2)} to deliver the given signal to the
 given process ID. All special cases for @racket[pid] from the
-@tt{kill(2)} manpage apply. }
+@tt{kill(2)} manpage apply.
 
-@subsection{Mapping between signal names and signal numbers}
+ Note that this function is @|unsafe|:
+ it can corrupt or crash the Racket runtime system.
+
+ For convenience, this library also re-exports
+ @racket[getpid] from @racketmodname[racket/os].
+}
+
+@section{Mapping between signal names and signal numbers}
 
 @defproc[(lookup-signal-number [sym symbol?]) (opt/c fixnum?)]{
 Returns a fixnum if the symbol name is defined, or @racket[#f] if not. }
