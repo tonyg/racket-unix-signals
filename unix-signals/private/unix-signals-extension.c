@@ -109,7 +109,7 @@ Scheme_Object *prim_get_signal_names(int argc, Scheme_Object **argv) {
 
   /* Not POSIX.1-1990, but SUSv2 and POSIX.1-2001 */
   ADD_SIGNAL_NAME(SIGBUS);
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
   ADD_SIGNAL_NAME(SIGPOLL);
 #endif
   ADD_SIGNAL_NAME(SIGPROF);
